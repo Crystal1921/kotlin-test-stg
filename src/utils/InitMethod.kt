@@ -1,15 +1,16 @@
 package utils
 
-import java.awt.Graphics
+import data.MenuButton
+import data.Rectangle
+import java.awt.Point
 import java.awt.image.BufferedImage
-import java.awt.image.ImageObserver
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import javax.imageio.ImageIO
 
-fun scanImages(path: Path): MutableMap<String, BufferedImage> {
+fun initImages(path: Path): MutableMap<String, BufferedImage> {
     val imagesMap : MutableMap<String, BufferedImage> = mutableMapOf()
     Files.walk(path).use { paths ->
         paths.filter { p: Path ->
@@ -30,12 +31,11 @@ fun scanImages(path: Path): MutableMap<String, BufferedImage> {
     return imagesMap
 }
 
-fun Graphics.drawMiddleImage(image: BufferedImage?, width: Int, observer: ImageObserver, posY: Int, gridNum : Int, gridID: Int) {
-    if (image == null) {throw IOException("image is null")}
-    if (gridNum < gridID) {throw IOException("Grid Num is less than Grid ID")}
-    val gridWidth = width / gridNum
-    val posX = gridWidth * (gridID - 0.5)
-    val imageWidth = image.width
-    val imageHeight = image.height
-    this.drawImage(image, (posX - imageWidth / 2).toInt(), posY - imageHeight / 2, observer)
+fun initButton() : MutableList<MenuButton> {
+    val deltaY = 24
+    val buttons: MutableList<MenuButton> = mutableListOf()
+    buttons.add(MenuButton("Game  Start", Point(230,100), Rectangle(230,100 - deltaY, 170,32),false,0))
+    buttons.add(MenuButton("Single Mode", Point(230,150), Rectangle(230,150 - deltaY, 170,32),false,1))
+    buttons.add(MenuButton("Exit", Point(230,200), Rectangle(230,200 - deltaY, 60,32),false,3))
+    return buttons
 }
