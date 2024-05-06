@@ -5,6 +5,7 @@ import data.MenuButton
 import data.Rectangle
 import entity.AbstractEntity
 import java.awt.Font
+import java.awt.image.BufferedImage
 import kotlin.math.pow
 
 fun getFont(size : Int) : Font {
@@ -26,5 +27,12 @@ fun isButtonsInArea(buttons : MutableList<MenuButton>, mouseX: Int, mouseY : Int
 }
 
 fun nearestEntity (pos : DoublePoint) : AbstractEntity? {
-    return Entity.entities.maxByOrNull { (pos.x - it.pos.x).pow(2) + (pos.y - it.pos.y).pow(2) }
+    return Entity.enemies.maxByOrNull { (pos.x - it.pos.x).pow(2) + (pos.y - it.pos.y).pow(2) }
+}
+
+fun getBoundingBox(image : BufferedImage?, pos: DoublePoint) : Rectangle {
+    if (image == null) {
+        return Rectangle(0,0,640,480)
+    }
+    return Rectangle(pos.x.toInt() - image.width / 2, pos.y.toInt() - image.height / 2,image.width,image.height)
 }

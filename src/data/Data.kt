@@ -37,3 +37,8 @@ enum class DanmakuType {
     Player,
     Enemy
 }
+
+enum class Power {
+    Small,
+    Big
+}

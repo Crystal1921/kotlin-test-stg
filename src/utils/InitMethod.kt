@@ -19,7 +19,8 @@ object Image{
 
 object Entity{
     val danmaku = mutableListOf<AbstractDanmaku>()
-    val entities = mutableListOf<AbstractEntity>()
+    val enemies = mutableListOf<AbstractEntity>()
+    val items = mutableListOf<AbstractEntity>()
 }
 
 fun initImages(path: Path): MutableMap<String, BufferedImage> {

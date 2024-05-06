@@ -5,6 +5,7 @@ import entity.HakureiDanmaku
 import data.MenuButton
 import data.Player
 import data.Rectangle
+import entity.AbstractRotateDanmaku
 import entity.Youkai
 import utils.*
 import utils.Image
@@ -13,12 +14,12 @@ import java.awt.event.*
 import java.awt.image.BufferStrategy
 import java.net.URI
 import java.util.*
-import java.util.function.Consumer
 import javax.swing.JButton
 import javax.swing.JEditorPane
 import javax.swing.JFrame
 import javax.swing.event.HyperlinkEvent
 import javax.swing.event.HyperlinkListener
+import kotlin.math.PI
 import kotlin.system.exitProcess
 
 class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMotionListener{
@@ -110,9 +111,14 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
 
     private fun gamingScreen(graphics: Graphics) {
         //渲染弹幕
-        Entity.danmaku.forEach(Consumer { graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt()) })
+        Entity.danmaku.forEach{ if (it is AbstractRotateDanmaku){
+            graphics.drawPosImage(rotateImage(it.image,it.angle + PI / 2),this,it.pos.x.toInt(),it.pos.y.toInt())
+        }   else graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt())
+        }
+        //渲染掉落物
+        Entity.items.forEach{graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt())}
         //渲染敌方实体
-        Entity.entities.forEach(Consumer { graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt()) })
+        Entity.enemies.forEach{ graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt()) }
         //渲染魔理莎激光
         graphics.color = Color.YELLOW
         graphics.fillRect(playerB.pos.x - 3, 0, 6 , playerB.pos.y)
@@ -132,22 +138,24 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
             Entity.danmaku.add(HakureiDanmaku(DoublePoint(playerA.pos.x.toDouble(),playerA.pos.y.toDouble())))
             playerA.shootCD = playerA.shootSpeed
         }
-        Entity.danmaku.forEach(Consumer { it.tick() })
-        Entity.danmaku.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) }
-        Entity.entities.forEach(Consumer { it.tick() })
-        Entity.entities.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) || it.health < 0}
+        Entity.danmaku.forEach{it.tick()}
+        Entity.danmaku.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) || it.isDiscarded }
+        Entity.enemies.forEach{it.tick()}
+        Entity.enemies.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) || it.health <= 0}
+        Entity.items.forEach{it.tick()}
+        Entity.items.removeIf{ !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt())}
         gameTotalTime ++
     }
 
     private fun enemyLogic() {
-        if (gameTotalTime == 100) {
-            Entity.entities.add(Youkai(10,DoublePoint(100.0,100.0),playerA))
+        if (gameTotalTime % 200 == 0) {
+            Entity.enemies.add(Youkai(20,DoublePoint(100.0,100.0),playerA))
         }
     }
 
     private fun startScreen(graphics: Graphics) {
         isButtonsInArea(buttons,mousePosition.x,mousePosition.y)
-        buttons.forEach(Consumer { button -> graphics.drawButton(button)})
+        buttons.forEach{ button -> graphics.drawButton(button)}
     }
 
     fun createAndShowGUI() {

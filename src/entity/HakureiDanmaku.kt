@@ -2,16 +2,14 @@ package entity
 
 import data.DanmakuType
 import data.DoublePoint
-import utils.Image
-import utils.nearestEntity
+import utils.*
 import java.awt.image.BufferedImage
 import java.lang.Math.toRadians
 import kotlin.math.*
 
-class HakureiDanmaku(override val danmakuType: DanmakuType, override var pos: DoublePoint, override val image: BufferedImage?) : AbstractDanmaku() {
+class HakureiDanmaku(override val danmakuType: DanmakuType, override var pos: DoublePoint, override val image: BufferedImage?) : AbstractRotateDanmaku() {
     constructor(pos: DoublePoint) : this(DanmakuType.Player,pos, Image.images["hakurei_danmaku.png"])
     private var target : AbstractEntity? = null
-    private var angle = toRadians(-90.0)
     private var moveSpeed = 6.0
     override fun tick() {
         target = nearestEntity(this.pos)
@@ -30,5 +28,12 @@ class HakureiDanmaku(override val danmakuType: DanmakuType, override var pos: Do
         }
         pos.x += moveSpeed * cos(angle)
         pos.y += moveSpeed * sin(angle)
+
+        Entity.enemies.forEach{
+            if(isInArea(getBoundingBox(image,pos),it.pos.x.toInt(),it.pos.y.toInt())) {
+                it.health --
+                this.isDiscarded = true
+            }
+        }
     }
 }

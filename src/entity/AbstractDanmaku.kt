@@ -6,7 +6,8 @@ import java.awt.image.BufferedImage
 
 abstract class AbstractDanmaku {
     abstract val danmakuType : DanmakuType
-    abstract var pos : DoublePoint
     abstract val image : BufferedImage?
+    abstract var pos : DoublePoint
+    var isDiscarded: Boolean = false
     abstract fun tick()
 }

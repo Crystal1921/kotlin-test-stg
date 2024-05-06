@@ -2,6 +2,7 @@ package entity
 
 import data.DoublePoint
 import data.Player
+import data.Power
 import utils.Entity
 import utils.Image
 import java.awt.image.BufferedImage
@@ -11,6 +12,10 @@ class Youkai (override var health: Int, override var pos: DoublePoint, override 
     constructor(health: Int,pos: DoublePoint,target: Player) : this(health,pos, Image.images["reimu_mouse.png"],target)
 
     override fun tick() {
+        if (health <= 0) {
+            Entity.items.add(ItemEntity(pos, Power.Big))
+            return
+        }
         lifeTime ++
         pos.x ++
         if (lifeTime % 50 == 0) {
