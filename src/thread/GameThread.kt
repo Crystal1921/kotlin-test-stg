@@ -1,16 +1,18 @@
 package thread
 
-import danmaku.AbstractDanmaku
-import danmaku.HakureiDanmaku
+import data.DoublePoint
+import entity.HakureiDanmaku
 import data.MenuButton
 import data.Player
 import data.Rectangle
+import entity.Youkai
 import utils.*
+import utils.Image
 import java.awt.*
 import java.awt.event.*
 import java.awt.image.BufferStrategy
 import java.net.URI
-import java.nio.file.Paths
+import java.util.*
 import java.util.function.Consumer
 import javax.swing.JButton
 import javax.swing.JEditorPane
@@ -21,21 +23,23 @@ import kotlin.system.exitProcess
 
 class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMotionListener{
     private val backgroundMusic = MusicThread("sound/Eternal_Night.mp3")
-    private val images = initImages(Paths.get("src/texture"))
     private val musicThread = Thread(backgroundMusic)
     private val gameThread = Thread(this)
     private val keyboardInput = KeyboardInput()
+    private val random : Random = Random()
     private val tps : Int = 100
     private val mspt : Int = 1000 / tps
     private val width = 640
     private val height = 480
-    private val danmaku : MutableList<AbstractDanmaku> = mutableListOf()
+    private val gameArea = Rectangle(0,0,width,height)
     private val playerA = Player(0,Point(width / 2 - 50, height / 2 + 100))
     private val playerB = Player(0,Point(width / 2 + 50, height / 2 + 100))
 
     private var mousePosition = Point()
     private var running : Boolean = false
     private var gameStarted = false
+    private var totalTime = 0
+    private var gameTotalTime = 0
     private lateinit var bufferStrategy : BufferStrategy
     private lateinit var buttons : MutableList<MenuButton>
 
@@ -59,38 +63,25 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
     private fun gameLoop() {
         processInput()
         renderFrame()
+        totalTime++
     }
 
     private fun processInput() {
         keyboardInput.poll()
+        //判断玩家是否低速移动
         playerA.isShift = keyboardInput.keyDown(KeyEvent.VK_SHIFT)
         playerB.isShift = keyboardInput.keyDown(KeyEvent.VK_CONTROL)
         playerA.moveSpeed = if (playerA.isShift) 2 else 4
         playerB.moveSpeed = if (playerB.isShift) 2 else 4
-        if ((keyboardInput.keyDown(KeyEvent.VK_S)) && playerA.pos.y < height - 16) {
-            playerA.pos.y += playerA.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_W)) && playerA.pos.y > 16) {
-            playerA.pos.y -= playerA.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_D)) && playerA.pos.x < width - 24) {
-            playerA.pos.x += playerA.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_A)) && playerA.pos.x > 24) {
-            playerA.pos.x -= playerA.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_DOWN)) && playerB.pos.y < height - 16) {
-            playerB.pos.y += playerB.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_UP)) && playerB.pos.y > 16) {
-            playerB.pos.y -= playerB.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_RIGHT)) && playerB.pos.x < width - 24) {
-            playerB.pos.x += playerB.moveSpeed
-        }
-        if ((keyboardInput.keyDown(KeyEvent.VK_LEFT)) && playerB.pos.x > 24) {
-            playerB.pos.x -= playerB.moveSpeed
-        }
+        //处理玩家按键移动
+        movePlayer(KeyEvent.VK_S, playerA, playerA.moveSpeed)
+        movePlayer(KeyEvent.VK_W, playerA, playerA.moveSpeed)
+        movePlayer(KeyEvent.VK_D, playerA, playerA.moveSpeed)
+        movePlayer(KeyEvent.VK_A, playerA, playerA.moveSpeed)
+        movePlayer(KeyEvent.VK_DOWN, playerB, playerB.moveSpeed)
+        movePlayer(KeyEvent.VK_UP, playerB, playerB.moveSpeed)
+        movePlayer(KeyEvent.VK_RIGHT, playerB, playerB.moveSpeed)
+        movePlayer(KeyEvent.VK_LEFT, playerB, playerB.moveSpeed)
     }
 
     private fun renderFrame() {
@@ -105,6 +96,7 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
                     if (gameStarted) {
                         gamingScreen(graphics)
                         gamingLogic()
+                        enemyLogic()
                     } else {
                         startScreen(graphics)
                     }
@@ -117,25 +109,40 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
     }
 
     private fun gamingScreen(graphics: Graphics) {
-        danmaku.forEach(Consumer { graphics.drawPosImage(it.image,this,it.pos.x,it.pos.y) })
+        //渲染弹幕
+        Entity.danmaku.forEach(Consumer { graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt()) })
+        //渲染敌方实体
+        Entity.entities.forEach(Consumer { graphics.drawPosImage(it.image,this,it.pos.x.toInt(),it.pos.y.toInt()) })
+        //渲染魔理莎激光
         graphics.color = Color.YELLOW
         graphics.fillRect(playerB.pos.x - 3, 0, 6 , playerB.pos.y)
         graphics.color = Color.WHITE
         graphics.fillRect(playerB.pos.x - 2, 0, 4 , playerB.pos.y)
-        graphics.drawPosImage(images["reimu.png"],this,playerA.pos.x,playerA.pos.y)
-        if (playerA.isShift) graphics.drawPosImage(images["judge_point.png"],this,playerA.pos.x,playerA.pos.y)
-        graphics.drawPosImage(images["marisa.png"],this,playerB.pos.x,playerB.pos.y)
-        if (playerB.isShift) graphics.drawPosImage(images["judge_point.png"],this,playerB.pos.x,playerB.pos.y)
+        //渲染自机
+        graphics.drawPosImage(Image.images["reimu.png"],this,playerA.pos.x,playerA.pos.y)
+        if (playerA.isShift) graphics.drawPosImage(Image.images["judge_point.png"],this,playerA.pos.x,playerA.pos.y)
+        graphics.drawPosImage(Image.images["marisa.png"],this,playerB.pos.x,playerB.pos.y)
+        if (playerB.isShift) graphics.drawPosImage(Image.images["judge_point.png"],this,playerB.pos.x,playerB.pos.y)
     }
 
     private fun gamingLogic() {
+        //灵梦发射符札
         playerA.shootCD --
         if (playerA.shootCD == 0) {
-            danmaku.add(HakureiDanmaku(Point(playerA.pos.x,playerA.pos.y),images["hakurei_danmaku.png"]))
-            playerA.shootCD = 5
+            Entity.danmaku.add(HakureiDanmaku(DoublePoint(playerA.pos.x.toDouble(),playerA.pos.y.toDouble())))
+            playerA.shootCD = playerA.shootSpeed
         }
-        danmaku.forEach(Consumer { it.tick() })
-        danmaku.filter { it.pos.y > 0 }
+        Entity.danmaku.forEach(Consumer { it.tick() })
+        Entity.danmaku.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) }
+        Entity.entities.forEach(Consumer { it.tick() })
+        Entity.entities.removeIf { !isInArea(gameArea,it.pos.x.toInt(),it.pos.y.toInt()) || it.health < 0}
+        gameTotalTime ++
+    }
+
+    private fun enemyLogic() {
+        if (gameTotalTime == 100) {
+            Entity.entities.add(Youkai(10,DoublePoint(100.0,100.0),playerA))
+        }
     }
 
     private fun startScreen(graphics: Graphics) {
@@ -150,7 +157,7 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
         val canvas = Canvas()
         val musicStart = JButton("Start")
         this.buttons = initButton()
-
+        //初始化底部bgm按钮
         musicStart.addActionListener {
             if(!musicThread.isAlive){
                 musicThread.start()
@@ -162,13 +169,13 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
                 musicThread.interrupt()
             }
         }
-
+        //初始化底部
         editorDOWN.layout = FlowLayout()
         editorDOWN.preferredSize = Dimension(width, 40)
         editorDOWN.add(musicStart)
         editorDOWN.add(musicStop)
         editorUP.isVisible = true
-
+        //初始化顶部广告（我很可爱，请给我star
         editorUP.contentType = "text/html"
         editorUP.text = "<html><body style='font-family:微软雅黑;text-align:center;'><a href='https://github.com/Crystal1921' style='text-decoration:none;color:black;'>我很可爱，请给我star</a></body></html>"
         editorUP.addHyperlinkListener(this)
@@ -184,7 +191,7 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
 
         ignoreRepaint = true
         isVisible = true
-
+        //布局
         contentPane.add(canvas,BorderLayout.CENTER)
         contentPane.add(editorUP, BorderLayout.NORTH)
         contentPane.add(editorDOWN, BorderLayout.SOUTH)
@@ -215,15 +222,18 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
     override fun mouseEntered(e: MouseEvent) {
 
     }
-
+    //处理玩家鼠标点击事件
     override fun mouseClicked(e: MouseEvent) {
         val selected = buttons.filter{it.isPointed}
         if (selected.size == 1) {
             val selectedButton = selected.first()
             when (selectedButton.id) {
-                0 -> gameStarted = true
+                0 -> {
+                    gameStarted = true
+                }
                 1 -> buttons[1] = MenuButton("Co-op Mode", Point(230,150), Rectangle(230,150 - 24, 150,32),false,2)
                 2 -> buttons[1] = MenuButton("Single Mode", Point(230,150), Rectangle(230,150 - 24, 170,32),false,1)
+                3 -> exitProcess(0)
                 else -> exitProcess(0)
             }
         }
@@ -246,5 +256,21 @@ class GameThread : JFrame(), Runnable, HyperlinkListener, MouseListener, MouseMo
 
     fun onWindowClosing(){
         exitProcess(0)
+    }
+
+    private fun movePlayer(keyCode: Int, player: Player, moveSpeed: Int) {
+        val minX = 24
+        val maxX = width - 24
+        val minY = 16
+        val maxY = height - 16
+
+        if (keyboardInput.keyDown(keyCode)) {
+            when (keyCode) {
+                KeyEvent.VK_S, KeyEvent.VK_DOWN -> if (player.pos.y < maxY) player.pos.y += moveSpeed
+                KeyEvent.VK_W, KeyEvent.VK_UP -> if (player.pos.y > minY) player.pos.y -= moveSpeed
+                KeyEvent.VK_D, KeyEvent.VK_RIGHT -> if (player.pos.x < maxX) player.pos.x += moveSpeed
+                KeyEvent.VK_A, KeyEvent.VK_LEFT -> if (player.pos.x > minX) player.pos.x -= moveSpeed
+            }
+        }
     }
 }

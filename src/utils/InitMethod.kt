@@ -2,13 +2,25 @@ package utils
 
 import data.MenuButton
 import data.Rectangle
+import entity.AbstractDanmaku
+import entity.AbstractEntity
 import java.awt.Point
 import java.awt.image.BufferedImage
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import javax.imageio.ImageIO
+
+object Image{
+    val images = initImages(Paths.get("src/texture"))
+}
+
+object Entity{
+    val danmaku = mutableListOf<AbstractDanmaku>()
+    val entities = mutableListOf<AbstractEntity>()
+}
 
 fun initImages(path: Path): MutableMap<String, BufferedImage> {
     val imagesMap : MutableMap<String, BufferedImage> = mutableMapOf()

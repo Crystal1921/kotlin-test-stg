@@ -24,7 +24,13 @@ data class Player(
     var bomb : Int = 3,
     var isShift : Boolean = false,
     var moveSpeed : Int = 4,
-    var shootCD : Int = 5
+    var shootSpeed : Int = 8,
+    var shootCD : Int = 8
+)
+
+data class DoublePoint(
+    var x : Double,
+    var y : Double
 )
 
 enum class DanmakuType {
